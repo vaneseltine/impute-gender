@@ -7,7 +7,16 @@ Demonstration uses data from the wonderful https://github.com/OpenGenderTracking
 Need to compare https://bocoup.com/blog/global-name-data to
 https://github.com/ropensci/genderdata
 
+
 ## other projects
+
+https://experts.illinois.edu/en/publications/a-search-engine-approach-to-estimating-temporal-changes-in-gender
+
+https://databank.illinois.edu/datasets/IDB-9087546
+
+http://abel.ischool.illinois.edu/cgi-bin/genni/nameprediction.cgi?name=Leslie
+
+https://cran.r-project.org/web/packages/gender/vignettes/predicting-gender.html
 
 https://github.com/ropensci/gender
  - uses name and year range; only provides point estimates
