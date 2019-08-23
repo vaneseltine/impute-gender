@@ -7,6 +7,8 @@ data/
 output/
 
 *.csv
+*.dot
+*.png
 
 # But keep various CI-related folders
 !.circleci/
