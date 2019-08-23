@@ -1,3 +1,9 @@
+import pickle
+from collections import defaultdict
+from csv import DictReader
+from pathlib import Path
+import urllib.request
+
 from collections import defaultdict
 from csv import DictReader
 from pathlib import Path
@@ -13,39 +19,24 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import export_graphviz
 from matplotlib import pyplot as plt
 
-csv_path = Path("./data/usnames.csv")
-
-names_all = defaultdict(list)
-
-with csv_path.open() as infile:
-    reader = DictReader(infile)
-    for i, row in enumerate(reader):
-        name = row.pop("Name")
-        year = int(row["Year"])
-        names_all[name].extend(
-            int(row["F"]) * [(year, 1)] + int(row["M"]) * [(year, 0)]
-        )
-
-# with csv_path.open() as infile:
-#     reader = DictReader(infile)
-#     for i, row in enumerate(reader):
-#         name = row.pop("Name")
-#         yr, n_f, n_m = (int(row[x]) for x in ["Year", "F", "M"])
-#         if n_f > 0:
-#             names_all[name].append({"year": yr, "female": 1, "n": n_f})
-#         if n_m > 0:
-#             names_all[name].append({"year": yr, "female": 0, "n": n_m})
-
 OUTCOME = "female"
 FEATURE_LIST = ["year"]
 
 
-def run_name(name):
-    if name not in names_all:
+pd.options.display.float_format = "{:.4f}".format
+
+ORIGINAL_DATA = (
+    "https://github.com/OpenGenderTracking/globalnamedata/raw/master/assets/usnames.csv"
+)
+CSV_IN = Path("./data/usnames.csv")
+
+
+def run_name(name, name_data):
+    if name not in name_data:
         print(name, "UNKNOWN")
         return
     start_time = time()
-    df = pd.DataFrame(names_all[name], columns=FEATURE_LIST + [OUTCOME])
+    df = pd.DataFrame(name_data[name], columns=FEATURE_LIST + [OUTCOME])
     y_mean = df[OUTCOME].mean()
     y_mode = int(df[OUTCOME].mode())
     print(f"\n{name}: {y_mean*100:.1f}% female")  # (mode = {y_mode})")
@@ -201,25 +192,107 @@ def run_name(name):
 #     [print("Variable: {:20} Importance: {}".format(*pair)) for pair in feature_importances]
 
 
-for name in [
-    # "Matthew",
-    # "Leslie",
-    # "Jordan",
-    # "Monroe",
-    # "Skyler",
-    # "Matthea",
-    # "Raphael",
-    # "Zuwei",
-    # "Harold",
-    # "Pat",
-    "Dolores",
-    "Natsuko",
-    "Jinseok",
-    "Zoran",
-    "Zoe",
-    "Ziyi",
-    "Zi",
-    "Zhou",
-    "Mattheas",
-]:
-    run_name(name)
+def load_data(csv_path):
+    """
+    Data are a lookup of {name: [sequence of female-n-year rows]} as:
+
+        {
+          'Aaron': [
+              {'female': 1, 'n': 0, 'year': 1880},
+              {'female': 0, 'n': 102, 'year': 1880},
+              {'female': 1, 'n': 0, 'year': 1881},
+              {'female': 0, 'n': 94, 'year': 1881},
+              ...
+              {'female': 1, 'n': 21, 'year': 2011},
+              {'female': 0, 'n': 7593, 'year': 2011},
+              {'female': 1, 'n': 21, 'year': 2012},
+              {'female': 0, 'n': 7478, 'year': 2012}
+              ],
+          'Ab': [
+              {'female': 1, 'n': 0, 'year': 1880},
+              {'female': 0, 'n': 5, 'year': 1880},
+              {'female': 1, 'n': 0, 'year': 1882},
+              {'female': 0, 'n': 5, 'year': 1882},
+              ...
+              ]
+          ...
+        }
+
+    """
+    print(f"Loading data from {CSV_IN}...")
+    pickle_path = ensure_pickle_cache(CSV_IN)
+
+    with pickle_path.open("rb") as handle:
+        print(f"Loading data from {pickle_path}...")
+        all_data = pickle.load(handle)
+    return all_data
+
+
+def ensure_pickle_cache(csv_path):
+    pickle_path = csv_path.with_suffix(".pickle")
+    if pickle_path.exists():
+        print(f"Already cached in {pickle_path}...")
+    else:
+        print(f"Caching {csv_path} into {pickle_path}...")
+        cache_in_pickle(csv_path, pickle_path)
+    if not pickle_path.exists():
+        raise RuntimeError(f"Could not create {pickle_path}")
+    return pickle_path
+
+
+def cache_in_pickle(csv_path, pickle_path):
+    dict_version = csv_to_dict(csv_path)
+    with pickle_path.open("wb") as handle:
+        pickle.dump(dict_version, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def csv_to_dict(csv_path):
+    names_all = defaultdict(list)
+
+    with csv_path.open() as infile:
+        reader = DictReader(infile)
+        for i, row in enumerate(reader):
+            name = row.pop("Name")
+            year = int(row["Year"])
+            names_all[name].extend(
+                int(row["F"]) * [(year, 1)] + int(row["M"]) * [(year, 0)]
+            )
+    return names_all
+
+
+def main():
+
+    if not CSV_IN.exists():
+        # Download the file from `url` and save it locally under `file_name`:
+        print(f"Saving {ORIGINAL_DATA} as {CSV_IN}...")
+        CSV_IN.parent.mkdir(exist_ok=True)
+        urllib.request.urlretrieve(ORIGINAL_DATA, CSV_IN)
+
+    name_data = load_data(CSV_IN)
+    for name in [
+        # "Matthew",
+        # "Leslie",
+        # "Jordan",
+        # "Monroe",
+        # "Skyler",
+        # "Matthea",
+        # "Raphael",
+        # "Zuwei",
+        # "Harold",
+        # "Pat",
+        "Dolores",
+        "Natsuko",
+        "Jinseok",
+        "Zoran",
+        "Zoe",
+        "Ziyi",
+        "Zi",
+        "Zhou",
+        "Mattheas",
+    ]:
+        run_name(name, name_data)
+    return name_data
+
+
+if __name__ == "__main__":
+    name_data = main()
