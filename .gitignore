@@ -1,0 +1,52 @@
+# Some substantial exclusions here:
+__*/
+.*/
+__test*
+
+*.csv
+
+# But keep various CI-related folders
+!.circleci/
+!.builds/
+
+# Standardish directories
+_build/
+build/
+develop-eggs/
+dist/
+eggs/
+htmlcov/
+lib/
+lib64/
+log/
+parts/
+sdist/
+temp/
+var/
+
+# Standardish extensions
+*.code-workspace
+*.coverage
+.coverage.*
+*.egg
+*.egg-info
+*.env
+*.log
+*.patch
+*.pickle
+*.py[cod]
+*.so
+*.swp
+
+# Miscellany
+.DS_Store
+.installed.cfg
+Desktop.ini
+pip-log.txt
+wily-*
+
+# Big lumps we should not need
+*.html
+*.pdf
+*.xls
+*.xlsx
