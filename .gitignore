@@ -3,6 +3,9 @@ __*/
 .*/
 __test*
 
+data/
+output/
+
 *.csv
 
 # But keep various CI-related folders
