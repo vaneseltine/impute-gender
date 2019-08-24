@@ -29,7 +29,7 @@ CSV_IN = Path("./data/usnames.csv")
 
 def run_name(name, name_data):
     if name not in name_data:
-        print(name, "UNKNOWN")
+        print(f"\n{name}: UNKNOWN")
         return
     start_time = time()
     df = pd.DataFrame(name_data[name], columns=FEATURE_LIST + [OUTCOME])
@@ -41,48 +41,38 @@ def run_name(name, name_data):
     features = np.array(df[FEATURE_LIST])
 
     x_train, x_test, y_train, y_test = train_test_split(
-        features, labels, test_size=0.25  # , random_state=42
+        features, labels, test_size=0.25
     )
 
     print(f"TOTAL n = {len(df):>12,}")
     print(f"TRAIN n = {len(x_train):>12,}")
     print(f" TEST n = {len(x_test):>12,}\n")
-    # print("Training Features Shape:", x_train.shape)
-    # print("Training Labels Shape:", y_train.shape)
-    # print("Testing Features Shape:", x_test.shape)
-    # print("Testing Labels Shape:", y_test.shape)
 
     # The baseline prediction is modal
     baseline_preds = np.array(y_mode)
     # Baseline errors, and display average baseline error
-    mbe = np.mean(abs(baseline_preds - y_test))
-    print(f"Mean baseline error: {mbe:.4f}")
-    if mbe == 0.0:
+    baseline_err = np.mean(abs(baseline_preds - y_test))
+    print(f"Mean baseline error: {baseline_err:.4f}")
+    if baseline_err == 0.0:
         print("No variation in outcome. Skipping the rest...")
         return
-    # Average baseline error:  0.3
 
-    # Instantiate model with 1000 decision trees
-    # rf = RandomForestRegressor(n_estimators=100, random_state=42)
+    # Instantiate model with n_estimators # decision trees
     model = RandomForestClassifier(n_estimators=10, n_jobs=6)
-    # Train the model on training data
-    model.fit(x_train, y_train)  # , sample_weight=sw_train)
+    model.fit(x_train, y_train)
 
-    # Use the forest's predict method on the test data
     predictions = model.predict(x_test)
     # Calculate the absolute errors
     errors = abs(predictions - y_test)
-    # Print out the mean absolute error (mae)
-    mae = np.mean(errors)
-    print(f"Mean absolute error: {mae:.4f}")
+    # Print out the mean absolute error (mean_abs_error)
+    mean_abs_error = np.mean(errors)
+    print(f"Mean absolute error: {mean_abs_error:.4f}")
 
-    raw_improvement = abs(mae - mbe)
-    if raw_improvement:
-        print(f"Improvement over baseline: {100*raw_improvement/mbe:.2f}%")
+    improved = abs(mean_abs_error - baseline_err)
+    if improved:
+        print(f"Improvement over baseline: {100*improved/baseline_err:.2f}%")
 
-    # , sample_weight=sw_train)
     print(f"     Train accuracy: {model.score(x_train, y_train):.4f}")
-    # , sample_weight=sw_test)
     print(f"      Test accuracy: {model.score(x_test, y_test):.4f}")
 
     for i in range(1920, 2011, 10):
@@ -95,16 +85,25 @@ def run_name(name, name_data):
         print(i, f"observed {actual}, pred. {probs}")
 
     # Histogram predictions:
-    fig, ax = plt.subplots(1)
-    # Increasing image size default 6.4, 4.8 == 640 x 480
-    # plt.figure(figsize=(10, 7.5))
+    fig, ax = plt.subplots()
     idx_female = np.where(y_test == 1)[0]
     idx_male = np.where(y_test == 0)[0]
     y_hat = model.predict_proba(x_test)
-    ax.hist(y_hat[idx_female, 1], histtype="step", label="obs. female")
-    ax.hist(y_hat[idx_male, 1], histtype="step", label="obs. male")
+    ax.hist(
+        y_hat[idx_female, 1],
+        histtype="step",
+        color="xkcd:sky blue",
+        label="obs. female",
+    )
+    ax.hist(
+        y_hat[idx_male, 1],
+        histtype="step",
+        color="xkcd:dusty orange",
+        label="obs. male",
+    )
     ax.set_xlabel("Predicted probability female")
     ax.set_ylabel("Observations")
+    ax.set_title(name)
     plt.xlim([0, 1])
     plt.legend()
     fig.tight_layout()
@@ -116,32 +115,6 @@ def run_name(name, name_data):
 
 
 def load_data(csv_path):
-    """
-    Data are a lookup of {name: [sequence of female-n-year rows]} as:
-
-        {
-          'Aaron': [
-              {'female': 1, 'n': 0, 'year': 1880},
-              {'female': 0, 'n': 102, 'year': 1880},
-              {'female': 1, 'n': 0, 'year': 1881},
-              {'female': 0, 'n': 94, 'year': 1881},
-              ...
-              {'female': 1, 'n': 21, 'year': 2011},
-              {'female': 0, 'n': 7593, 'year': 2011},
-              {'female': 1, 'n': 21, 'year': 2012},
-              {'female': 0, 'n': 7478, 'year': 2012}
-              ],
-          'Ab': [
-              {'female': 1, 'n': 0, 'year': 1880},
-              {'female': 0, 'n': 5, 'year': 1880},
-              {'female': 1, 'n': 0, 'year': 1882},
-              {'female': 0, 'n': 5, 'year': 1882},
-              ...
-              ]
-          ...
-        }
-
-    """
     print(f"Loading data from {CSV_IN}...")
     pickle_path = ensure_pickle_cache(CSV_IN)
 
@@ -193,6 +166,8 @@ def main():
 
     name_data = load_data(CSV_IN)
     TEST_NAMES = [
+        "Pat",
+        "Brooke",
         "Matthew",
         "Leslie",
         "Jordan",
@@ -202,7 +177,6 @@ def main():
         "Raphael",
         "Zuwei",
         "Harold",
-        "Pat",
         "Dolores",
         "Natsuko",
         "Jinseok",
