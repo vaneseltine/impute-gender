@@ -16,10 +16,14 @@ from sklearn.model_selection import train_test_split
 OUTCOME = "female"
 FEATURE_LIST = ["year"]
 
+RANDOM_SEED = 48106
+RUN_PLOTS = False
+PREDICT_RANGE = False
+SIMULTANEOUS_JOBS = 1
 # Turning off matplotlib interactivity
 plt.ioff()
 
-pd.options.display.float_format = "{:.4f}".format
+# pd.options.display.float_format = "{:.4f}".format
 
 ORIGINAL_DATA = (
     "https://github.com/OpenGenderTracking/globalnamedata/raw/master/assets/usnames.csv"
@@ -27,7 +31,7 @@ ORIGINAL_DATA = (
 CSV_IN = Path("./data/usnames.csv")
 
 
-def run_name(name, name_data):
+def run_name(name, name_data, pred_from_x=None):
     if name not in name_data:
         print(f"\n{name}: UNKNOWN")
         return
@@ -41,7 +45,7 @@ def run_name(name, name_data):
     features = np.array(df[FEATURE_LIST])
 
     x_train, x_test, y_train, y_test = train_test_split(
-        features, labels, test_size=0.25
+        features, labels, test_size=0.25, random_state=RANDOM_SEED
     )
 
     print(f"TOTAL n = {len(df):>12,}")
@@ -58,7 +62,9 @@ def run_name(name, name_data):
         return
 
     # Instantiate model with n_estimators # decision trees
-    model = RandomForestClassifier(n_estimators=10, n_jobs=6)
+    model = RandomForestClassifier(
+        n_estimators=10, n_jobs=SIMULTANEOUS_JOBS, random_state=RANDOM_SEED
+    )
     model.fit(x_train, y_train)
 
     predictions = model.predict(x_test)
@@ -75,43 +81,52 @@ def run_name(name, name_data):
     print(f"     Train accuracy: {model.score(x_train, y_train):.4f}")
     print(f"      Test accuracy: {model.score(x_test, y_test):.4f}")
 
-    for i in range(1920, 2011, 10):
-        probs = model.predict_proba([[i]])
-        observed = df[df["year"] == i][OUTCOME]
-        if observed.empty:
-            actual = "-none-"
-        else:
-            actual = f"{(observed.sum() / observed.count())*100:.2f}%"
-        print(i, f"observed {actual}, pred. {probs}")
+    if PREDICT_RANGE:
+        for i in range(1920, 2011, 10):
+            predict_from(model, df, i)
 
-    # Histogram predictions:
-    fig, ax = plt.subplots()
-    idx_female = np.where(y_test == 1)[0]
-    idx_male = np.where(y_test == 0)[0]
-    y_hat = model.predict_proba(x_test)
-    ax.hist(
-        y_hat[idx_female, 1],
-        histtype="step",
-        color="xkcd:sky blue",
-        label="obs. female",
-    )
-    ax.hist(
-        y_hat[idx_male, 1],
-        histtype="step",
-        color="xkcd:dusty orange",
-        label="obs. male",
-    )
-    ax.set_xlabel("Predicted probability female")
-    ax.set_ylabel("Observations")
-    ax.set_title(name)
-    plt.xlim([0, 1])
-    plt.legend()
-    fig.tight_layout()
-    # plt.show()
-    plt.savefig(f"output/{name}.png", pad_inches=0.2)
-    plt.close()
+    if RUN_PLOTS:
+        # Histogram predictions:
+        fig, ax = plt.subplots()
+        idx_female = np.where(y_test == 1)[0]
+        idx_male = np.where(y_test == 0)[0]
+        y_hat = model.predict_proba(x_test)
+        ax.hist(
+            y_hat[idx_female, 1],
+            histtype="step",
+            color="xkcd:sky blue",
+            label="obs. female",
+        )
+        ax.hist(
+            y_hat[idx_male, 1],
+            histtype="step",
+            color="xkcd:dusty orange",
+            label="obs. male",
+        )
+        ax.set_xlabel("Predicted probability female")
+        ax.set_ylabel("Observations")
+        ax.set_title(name)
+        plt.xlim([0, 1])
+        plt.legend()
+        fig.tight_layout()
+        # plt.show()
+        plt.savefig(f"output/{name}.png", pad_inches=0.2)
+        plt.close()
     elapsed = time() - start_time
     print(f"{elapsed:.2f} sec.")
+    if pred_from_x:
+        return predict_from(model, df, pred_from_x)
+
+
+def predict_from(model, df, i):
+    probs = model.predict_proba([[i]])
+    observed = df[df["year"] == i][OUTCOME]
+    if observed.empty:
+        actual = "-none-"
+    else:
+        actual = f"{(observed.sum() / observed.count())*100:.2f}%"
+    print(i, f"true {actual} of {observed.count()}, pred: {probs}")
+    return probs[0][-1]
 
 
 def load_data(csv_path):
