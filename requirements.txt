@@ -4,4 +4,10 @@ scikit-learn==0.21.3
 sklearn
 pydot==1.4.1
 scipy
-forestci==0.3
+matplotlib
+duecredit
+flake8
+pytest
+pylint
+hypothesis
+black

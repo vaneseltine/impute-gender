@@ -1,27 +1,23 @@
 import pickle
-from collections import defaultdict
-from csv import DictReader
-from pathlib import Path
 import urllib.request
-
 from collections import defaultdict
 from csv import DictReader
 from pathlib import Path
 from time import time
 
-import forestci as fci
 import numpy as np
 import pandas as pd
-import pydot  # Pull out one tree from the forest
-from sklearn import metrics
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.tree import export_graphviz
 from matplotlib import pyplot as plt
+
+# from sklearn import metrics
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 OUTCOME = "female"
 FEATURE_LIST = ["year"]
 
+# Turning off matplotlib interactivity
+plt.ioff()
 
 pd.options.display.float_format = "{:.4f}".format
 
@@ -39,36 +35,14 @@ def run_name(name, name_data):
     df = pd.DataFrame(name_data[name], columns=FEATURE_LIST + [OUTCOME])
     y_mean = df[OUTCOME].mean()
     y_mode = int(df[OUTCOME].mode())
-    print(f"\n{name}: {y_mean*100:.1f}% female")  # (mode = {y_mode})")
-
-    # print(df)
-    # print(df.sample(frac=0.5, random_state=42))
+    print(f"\n{name}: {y_mean*100:.1f}% female")
 
     labels = np.array(df[OUTCOME])
     features = np.array(df[FEATURE_LIST])
-    # print(df)
-    # print(features)
-    # sample_weights = np.array(df["n"])
-
-    # print(sample_weights)
 
     x_train, x_test, y_train, y_test = train_test_split(
         features, labels, test_size=0.25  # , random_state=42
     )
-
-    # print("x_train", x_train[:5])
-    # print("x_test", x_test[:5])
-    # print("y_train", y_train[:5])
-    # print("y_test", y_test[:5])
-    # print("sw_train", sw_train[:5])
-    # print("sw_test", sw_test[:5])
-
-    # stacked = pd.DataFrame(np.hstack((x_test[0], y_test, sw_test)))
-    # print(stacked)
-    # print("x_train", x_train, len(x_train))
-    # print("x_test", x_test, len(x_test))
-    # print("y_train", y_train, len(y_train))
-    # print("y_test", y_test, len(y_test))
 
     print(f"TOTAL n = {len(df):>12,}")
     print(f"TRAIN n = {len(x_train):>12,}")
@@ -81,9 +55,11 @@ def run_name(name, name_data):
     # The baseline prediction is modal
     baseline_preds = np.array(y_mode)
     # Baseline errors, and display average baseline error
-    baseline_errors = abs(baseline_preds - y_test)
-    mbe = np.mean(baseline_errors)
+    mbe = np.mean(abs(baseline_preds - y_test))
     print(f"Mean baseline error: {mbe:.4f}")
+    if mbe == 0.0:
+        print("No variation in outcome. Skipping the rest...")
+        return
     # Average baseline error:  0.3
 
     # Instantiate model with 1000 decision trees
@@ -103,8 +79,6 @@ def run_name(name, name_data):
     raw_improvement = abs(mae - mbe)
     if raw_improvement:
         print(f"Improvement over baseline: {100*raw_improvement/mbe:.2f}%")
-    else:
-        print("Identical predictions to baseline.")
 
     # , sample_weight=sw_train)
     print(f"     Train accuracy: {model.score(x_train, y_train):.4f}")
@@ -120,76 +94,25 @@ def run_name(name, name_data):
             actual = f"{(observed.sum() / observed.count())*100:.2f}%"
         print(i, f"observed {actual}, pred. {probs}")
 
-    # # Histogram predictions without error bars:
-    # fig, ax = plt.subplots(1)
-
-    # idx_female = np.where(y_test == 1)[0]
-    # idx_male = np.where(y_test == 0)[0]
-    # y_hat = model.predict_proba(x_test)
-
-    # ax.hist(y_hat[idx_female, 1], histtype="step", label="female")
-    # ax.hist(y_hat[idx_male, 1], histtype="step", label="male")
-    # ax.set_xlabel("Prediction (spam probability)")
-    # ax.set_ylabel("Number of observations")
-    # plt.legend()
-
-    # # Calculate the variance
-    # V_IJ_unbiased = fci.random_forest_error(model, x_train, x_test)
-
-    # # Plot forest prediction for emails and standard deviation for estimates
-    # # Blue points are spam emails; Green points are non-spam emails
-    # fig, ax = plt.subplots(1)
-    # ax.scatter(y_hat[idx_female, 1], np.sqrt(V_IJ_unbiased[idx_female]), label="female")
-
-    # ax.scatter(y_hat[idx_male, 1], np.sqrt(V_IJ_unbiased[idx_male]), label="male")
-
-    # ax.set_xlabel("Prediction (spam probability)")
-    # ax.set_ylabel("Standard deviation")
-    # plt.legend()
+    # Histogram predictions:
+    fig, ax = plt.subplots(1)
+    # Increasing image size default 6.4, 4.8 == 640 x 480
+    # plt.figure(figsize=(10, 7.5))
+    idx_female = np.where(y_test == 1)[0]
+    idx_male = np.where(y_test == 0)[0]
+    y_hat = model.predict_proba(x_test)
+    ax.hist(y_hat[idx_female, 1], histtype="step", label="obs. female")
+    ax.hist(y_hat[idx_male, 1], histtype="step", label="obs. male")
+    ax.set_xlabel("Predicted probability female")
+    ax.set_ylabel("Observations")
+    plt.xlim([0, 1])
+    plt.legend()
+    fig.tight_layout()
     # plt.show()
-    # print(x_train)
-    # print(y_train)
-
-    # exit()
-
-    # for metric in (
-    #     metrics.accuracy_score,
-    #     metrics.precision_score,
-    #     metrics.recall_score,
-    #     metrics.f1_score,
-    # ):
-    #     print(f"Train {metric} {metric(x_train, y_train):.4f}")
-    #     # , sample_weight=sw_test)
-    #     print(f" Test {metric} {metric(x_test, y_test):.4f}")
-
-    # print("test", y_test[:15])
-    # print("pred", predictions[:15])
-
+    plt.savefig(f"output/{name}.png", pad_inches=0.2)
+    plt.close()
     elapsed = time() - start_time
     print(f"{elapsed:.2f} sec.")
-
-
-# def make_tree(model):
-#     tree = model.estimators_[5]  # Export the image to a dot file
-#     export_graphviz(
-#         tree, out_file="tree.dot", feature_names=feature_list, rounded=True, precision=1
-#     )  # Use dot file to create a graph
-#     (graph,) = pydot.graph_from_dot_file("tree.dot")  # Write graph to a png file
-#     graph.write_png("tree.png")
-
-# def examine_important_features(model):
-#     # Get numerical feature importances
-#     importances = list(
-#         model.feature_importances_
-#     )  # List of tuples with variable and importance
-#     feature_importances = [
-#         (feature, round(importance, 2))
-#         for feature, importance in zip(feature_list, importances)
-#     ]  # Sort the feature importances by most important first
-#     feature_importances = sorted(
-#         feature_importances, key=lambda x: x[1], reverse=True
-#     )  # Print out the feature and importances
-#     [print("Variable: {:20} Importance: {}".format(*pair)) for pair in feature_importances]
 
 
 def load_data(csv_path):
@@ -269,17 +192,17 @@ def main():
         urllib.request.urlretrieve(ORIGINAL_DATA, CSV_IN)
 
     name_data = load_data(CSV_IN)
-    for name in [
-        # "Matthew",
-        # "Leslie",
-        # "Jordan",
-        # "Monroe",
-        # "Skyler",
-        # "Matthea",
-        # "Raphael",
-        # "Zuwei",
-        # "Harold",
-        # "Pat",
+    TEST_NAMES = [
+        "Matthew",
+        "Leslie",
+        "Jordan",
+        "Monroe",
+        "Skyler",
+        "Matthea",
+        "Raphael",
+        "Zuwei",
+        "Harold",
+        "Pat",
         "Dolores",
         "Natsuko",
         "Jinseok",
@@ -289,7 +212,9 @@ def main():
         "Zi",
         "Zhou",
         "Mattheas",
-    ]:
+    ]
+
+    for name in TEST_NAMES:
         run_name(name, name_data)
     return name_data
 
