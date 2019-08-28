@@ -38,10 +38,13 @@ Date of birth is therefore a useful -- but by no means perfect -- feature to con
 Time-Independent       Time-Dependent
 
 
-For any specific name, a logistic regression that captures the functional form of the relationship between year and gender ratio could be suitable. However, as above, this is a name-by-name process. Creating a robust specification for every name in the SSA database would require some 93xxx regressions, each with a potentially different relationship. Some might be approximated by a quadratic term, others would be more accurately captured by a spline.
+For any specific name, a logistic regression that captures the functional form of the relationship between year and gender ratio could be suitable. However, as above, this is a name-by-name process. There is no useful general pattern of names changing associations from one gender to another. Creating a robust specification for every name in the SSA database would therefore require some 91,320 regressions (in the 1880--2012 data), each with a potentially different relationship. Some might be approximated by a linear year term, others perhaps a quadratic term, others with more rapid changes could be more accurately captured by a spline.
+
+Low n
 
 #### small multiples graph with various weird versions of time-dependent names
 
+A machine learning approach offers a substantially more efficient process than validating 91,320 separate year-gender-name relationships.
 
 ## gender data
 
