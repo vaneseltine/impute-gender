@@ -67,6 +67,8 @@ def get_package_logger(std_out=True, log_file=None, debug=True):
 
 logger = get_package_logger()
 
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+
 
 def run_name(name, name_data, pred_from_x=None):
     if name not in name_data:
@@ -209,7 +211,37 @@ def csv_to_dict(csv_path):
     return names_all
 
 
+TEST_NAMES = [
+    "Pat",
+    "Brooke",
+    "Tristan",
+    # "Matthew",
+    # "Leslie",
+    # "Jordan",
+    # "Monroe",
+    # "Skyler",
+    # "Matthea",
+    # "Raphael",
+    # "Zuwei",
+    # "Harold",
+    # "Dolores",
+    # "Natsuko",
+    # "Jinseok",
+    # "Zoran",
+    # "Zoe",
+    # "Ziyi",
+    # "Zi",
+    # "Zhou",
+    # "Mattheas",
+]
+
+
 def main():
+
+    if len(sys.argv) > 1:
+        test_names = sys.argv[1:]
+    else:
+        test_names = TEST_NAMES
 
     if not CSV_IN.exists():
         # Download the file from `url` and save it locally under `file_name`:
@@ -218,31 +250,8 @@ def main():
         urllib.request.urlretrieve(ORIGINAL_DATA, CSV_IN)
 
     name_data = load_data(CSV_IN)
-    TEST_NAMES = [
-        "Pat",
-        "Brooke",
-        "Tristan",
-        # "Matthew",
-        # "Leslie",
-        # "Jordan",
-        # "Monroe",
-        # "Skyler",
-        # "Matthea",
-        # "Raphael",
-        # "Zuwei",
-        # "Harold",
-        # "Dolores",
-        # "Natsuko",
-        # "Jinseok",
-        # "Zoran",
-        # "Zoe",
-        # "Ziyi",
-        # "Zi",
-        # "Zhou",
-        # "Mattheas",
-    ]
 
-    for name in TEST_NAMES:
+    for name in test_names:
         run_name(name, name_data)
     return name_data
 
