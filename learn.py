@@ -4,6 +4,8 @@ from collections import defaultdict
 from csv import DictReader
 from pathlib import Path
 from time import time
+import logging
+import sys
 
 import numpy as np
 import pandas as pd
@@ -17,7 +19,7 @@ OUTCOME = "female"
 FEATURE_LIST = ["year"]
 
 RANDOM_SEED = 48106
-RUN_PLOTS = False
+RUN_PLOTS = True
 PREDICT_RANGE = False
 SIMULTANEOUS_JOBS = 1
 # Turning off matplotlib interactivity
@@ -31,15 +33,51 @@ ORIGINAL_DATA = (
 CSV_IN = Path("./data/usnames.csv")
 
 
+def get_package_logger(std_out=True, log_file=None, debug=True):
+
+    log_level = logging.DEBUG if debug else logging.INFO
+
+    if debug:
+        formatter = logging.Formatter(
+            fmt="{asctime} {name:<20} {lineno:>3}:{levelname:<7} | {message}",
+            style="{",
+            datefmt=r"%Y%m%d-%H%M%S",
+        )
+    else:
+        formatter = logging.Formatter(
+            fmt="{asctime} {levelname:>7} | {message}", style="{", datefmt=r"%H:%M:%S"
+        )
+
+    handlers = []
+    if log_file:
+        file_handler = logging.FileHandler(filename=log_file)
+        file_handler.setFormatter(formatter)
+        handlers.append(file_handler)
+    if std_out:
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setFormatter(formatter)
+        handlers.append(stream_handler)
+    logging.basicConfig(level=logging.INFO, handlers=handlers)
+
+    logging.getLogger().setLevel(log_level)
+    new_logger = logging.getLogger(__name__)
+    new_logger.debug(f"Logging from {__name__}, {__file__}")
+    return new_logger
+
+
+logger = get_package_logger()
+
+
 def run_name(name, name_data, pred_from_x=None):
     if name not in name_data:
-        print(f"\n{name}: UNKNOWN")
+        logger.debug("")
+        logger.debug(f"{name}: UNKNOWN")
         return
     start_time = time()
     df = pd.DataFrame(name_data[name], columns=FEATURE_LIST + [OUTCOME])
     y_mean = df[OUTCOME].mean()
     y_mode = int(df[OUTCOME].mode())
-    print(f"\n{name}: {y_mean*100:.1f}% female")
+    logger.debug(f"{name}: {y_mean*100:.1f}% female")
 
     labels = np.array(df[OUTCOME])
     features = np.array(df[FEATURE_LIST])
@@ -48,17 +86,17 @@ def run_name(name, name_data, pred_from_x=None):
         features, labels, test_size=0.25, random_state=RANDOM_SEED
     )
 
-    print(f"TOTAL n = {len(df):>12,}")
-    print(f"TRAIN n = {len(x_train):>12,}")
-    print(f" TEST n = {len(x_test):>12,}\n")
+    logger.debug(f"TOTAL n = {len(df):>12,}")
+    logger.debug(f"TRAIN n = {len(x_train):>12,}")
+    logger.debug(f" TEST n = {len(x_test):>12,}\n")
 
     # The baseline prediction is modal
     baseline_preds = np.array(y_mode)
     # Baseline errors, and display average baseline error
     baseline_err = np.mean(abs(baseline_preds - y_test))
-    print(f"Mean baseline error: {baseline_err:.4f}")
+    logger.debug(f"Mean baseline error: {baseline_err:.4f}")
     if baseline_err == 0.0:
-        print("No variation in outcome. Skipping the rest...")
+        logger.debug("No variation in outcome. Skipping the rest...")
         return
 
     # Instantiate model with n_estimators # decision trees
@@ -72,14 +110,14 @@ def run_name(name, name_data, pred_from_x=None):
     errors = abs(predictions - y_test)
     # Print out the mean absolute error (mean_abs_error)
     mean_abs_error = np.mean(errors)
-    print(f"Mean absolute error: {mean_abs_error:.4f}")
+    logger.debug(f"Mean absolute error: {mean_abs_error:.4f}")
 
     improved = abs(mean_abs_error - baseline_err)
     if improved:
-        print(f"Improvement over baseline: {100*improved/baseline_err:.2f}%")
+        logger.debug(f"Improvement over baseline: {100*improved/baseline_err:.2f}%")
 
-    print(f"     Train accuracy: {model.score(x_train, y_train):.4f}")
-    print(f"      Test accuracy: {model.score(x_test, y_test):.4f}")
+    logger.debug(f"     Train accuracy: {model.score(x_train, y_train):.4f}")
+    logger.debug(f"      Test accuracy: {model.score(x_test, y_test):.4f}")
 
     if PREDICT_RANGE:
         for i in range(1920, 2011, 10):
@@ -113,7 +151,7 @@ def run_name(name, name_data, pred_from_x=None):
         plt.savefig(f"output/{name}.png", pad_inches=0.2)
         plt.close()
     elapsed = time() - start_time
-    print(f"{elapsed:.2f} sec.")
+    logger.debug(f"{elapsed:.2f} sec.")
     if pred_from_x:
         return predict_from(model, df, pred_from_x)
 
@@ -125,16 +163,16 @@ def predict_from(model, df, i):
         actual = "-none-"
     else:
         actual = f"{(observed.sum() / observed.count())*100:.2f}%"
-    print(i, f"true {actual} of {observed.count()}, pred: {probs}")
+    logger.debug(i, f"true {actual} of {observed.count()}, pred: {probs}")
     return probs[0][-1]
 
 
 def load_data(csv_path):
-    print(f"Loading data from {CSV_IN}...")
+    logger.debug(f"Loading data from {CSV_IN}...")
     pickle_path = ensure_pickle_cache(CSV_IN)
 
     with pickle_path.open("rb") as handle:
-        print(f"Loading data from {pickle_path}...")
+        logger.debug(f"Loading data from {pickle_path}...")
         all_data = pickle.load(handle)
     return all_data
 
@@ -142,9 +180,9 @@ def load_data(csv_path):
 def ensure_pickle_cache(csv_path):
     pickle_path = csv_path.with_suffix(".pickle")
     if pickle_path.exists():
-        print(f"Already cached in {pickle_path}...")
+        logger.debug(f"Already cached in {pickle_path}...")
     else:
-        print(f"Caching {csv_path} into {pickle_path}...")
+        logger.debug(f"Caching {csv_path} into {pickle_path}...")
         cache_in_pickle(csv_path, pickle_path)
     if not pickle_path.exists():
         raise RuntimeError(f"Could not create {pickle_path}")
@@ -175,7 +213,7 @@ def main():
 
     if not CSV_IN.exists():
         # Download the file from `url` and save it locally under `file_name`:
-        print(f"Saving {ORIGINAL_DATA} as {CSV_IN}...")
+        logger.debug(f"Saving {ORIGINAL_DATA} as {CSV_IN}...")
         CSV_IN.parent.mkdir(exist_ok=True)
         urllib.request.urlretrieve(ORIGINAL_DATA, CSV_IN)
 
@@ -183,24 +221,25 @@ def main():
     TEST_NAMES = [
         "Pat",
         "Brooke",
-        "Matthew",
-        "Leslie",
-        "Jordan",
-        "Monroe",
-        "Skyler",
-        "Matthea",
-        "Raphael",
-        "Zuwei",
-        "Harold",
-        "Dolores",
-        "Natsuko",
-        "Jinseok",
-        "Zoran",
-        "Zoe",
-        "Ziyi",
-        "Zi",
-        "Zhou",
-        "Mattheas",
+        "Tristan",
+        # "Matthew",
+        # "Leslie",
+        # "Jordan",
+        # "Monroe",
+        # "Skyler",
+        # "Matthea",
+        # "Raphael",
+        # "Zuwei",
+        # "Harold",
+        # "Dolores",
+        # "Natsuko",
+        # "Jinseok",
+        # "Zoran",
+        # "Zoe",
+        # "Ziyi",
+        # "Zi",
+        # "Zhou",
+        # "Mattheas",
     ]
 
     for name in TEST_NAMES:
