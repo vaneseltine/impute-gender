@@ -10,14 +10,17 @@ The gender most commonly associated with a given name can change considerably ov
                          % Female
  Name           1920    1950    1980    2010   Slope   Overall        n
 --------------------------------------------------------------------------
-Anne
-Donna
-Elizabeth       99.7    99.7    99.7    99.7     0      99.7    1,587,027
-Hillary
-Jordan
-Leslie
-Matthew         0.4     0.4     0.4     0.4      0       0.4    1,532,144
-Thomas
+Anne            99.8    99.8    99.6   100.0             99.7      319,157
+April          100.0   100.0    99.6   100.0             99.7      234,849
+Donna          100.0    99.8    99.8   100.0             99.7      832,134
+Elizabeth       99.7    99.7    99.7    99.7     0       99.7    1,587,027
+Hillary          0.0    73.0    98.7   100.0             95.7       29,091
+Jordan           0.0     9.1    18.7    17.3             26.9      462,762
+Leslie           0.0    52.2    90.4    97.1             70.0      374,341
+Matthew          0.4     0.4     0.4     0.4     0        0.4    1,532,144
+Ronald           0.0     0.2     0.7     0.0              0.4    1,074,058
+Thomas           0.5     0.2     0.6     0.2              0.4    2,277,381
+--------------------------------------------------------------------------
 
 Date of birth is therefore a useful -- but by no means perfect -- feature to consider when imputing gender from a name. (fn: Family national or cultural background can also be beneficial. Among Russian families, newborn Alexis is likely male, but we'd guess female in recent United States births. --also Andreas? -- Robin in England vs U.S.--)
 
