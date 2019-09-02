@@ -1,11 +1,12 @@
+import csv
+import logging
 import pickle
+import sys
 import urllib.request
 from collections import defaultdict
 from csv import DictReader
 from pathlib import Path
 from time import time
-import logging
-import sys
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,7 @@ plt.ioff()
 
 # pd.options.display.float_format = "{:.4f}".format
 
+OUTPUT_DIR = Path("./output/")
 ORIGINAL_DATA = (
     "https://github.com/OpenGenderTracking/globalnamedata/raw/master/assets/usnames.csv"
 )
@@ -70,7 +72,7 @@ logger = get_package_logger()
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 
-def run_name(name, name_data, pred_from_x=None):
+def run_name(name, name_data, ad_hoc_years=None, run_all_years=False):
     if name not in name_data:
         logger.debug("")
         logger.debug(f"{name}: UNKNOWN")
@@ -90,7 +92,7 @@ def run_name(name, name_data, pred_from_x=None):
 
     logger.debug(f"TOTAL n = {len(df):>12,}")
     logger.debug(f"TRAIN n = {len(x_train):>12,}")
-    logger.debug(f" TEST n = {len(x_test):>12,}\n")
+    logger.debug(f" TEST n = {len(x_test):>12,}")
 
     # The baseline prediction is modal
     baseline_preds = np.array(y_mode)
@@ -99,7 +101,7 @@ def run_name(name, name_data, pred_from_x=None):
     logger.debug(f"Mean baseline error: {baseline_err:.4f}")
     if baseline_err == 0.0:
         logger.debug("No variation in outcome. Skipping the rest...")
-        return
+        return [[name, None, y_mean]]
 
     # Instantiate model with n_estimators # decision trees
     model = RandomForestClassifier(
@@ -154,8 +156,15 @@ def run_name(name, name_data, pred_from_x=None):
         plt.close()
     elapsed = time() - start_time
     logger.debug(f"{elapsed:.2f} sec.")
-    if pred_from_x:
-        return predict_from(model, df, pred_from_x)
+    if ad_hoc_years:
+        for yr in ad_hoc_years:
+            predict_from(model, df, yr)
+    if run_all_years:
+        collection = []
+        for yr in range(1902, 2013):
+            pred_f = predict_from(model, df, yr)
+            collection.append([name, yr, pred_f])
+        return collection
 
 
 def predict_from(model, df, i):
@@ -163,10 +172,12 @@ def predict_from(model, df, i):
     observed = df[df["year"] == i][OUTCOME]
     if observed.empty:
         actual = "-none-"
+        result = None
     else:
         actual = f"{(observed.sum() / observed.count())*100:.2f}%"
-    logger.debug(i, f"true {actual} of {observed.count()}, pred: {probs}")
-    return probs[0][-1]
+        result = probs[0][-1]
+    logger.debug(f"{i}: true {actual} of {observed.count()}, pred: {probs}")
+    return result
 
 
 def load_data(csv_path):
@@ -252,8 +263,22 @@ def main():
     name_data = load_data(CSV_IN)
 
     for name in test_names:
-        run_name(name, name_data)
-    return name_data
+        collection = run_name(name, name_data, ad_hoc_years=None, run_all_years=True)
+        if not collection:
+            logger.debug(f"No data for {name}; producing no output.")
+            continue
+        output_file = (OUTPUT_DIR / "matvan" / name.lower()).with_suffix(".csv")
+        with output_file.open("w") as outfile:
+
+            wrtr = csv.writer(outfile)
+            wrtr.writerow(["name", "year", "pred_f"])
+
+            for name, yr, pred_f in collection:
+
+                formatted_pred = None if pred_f is None else round(pred_f, 5)
+                row = [name.lower(), yr, formatted_pred]
+                wrtr.writerow(row)
+                print(f"CSV: {row}")
 
 
 if __name__ == "__main__":

@@ -56,10 +56,15 @@ Demonstration uses data from the wonderful https://github.com/OpenGenderTracking
 Need to compare https://bocoup.com/blog/global-name-data to
 https://github.com/ropensci/genderdata
 
+https://www.researchgate.net/publication/326425631_Comparison_and_benchmark_of_name-to-gender_inference_services
 
 ## other projects
 
+http://abel.lis.illinois.edu/cgi-bin/genni/nameprediction.cgi?name=leslie
+
 https://experts.illinois.edu/en/publications/a-search-engine-approach-to-estimating-temporal-changes-in-gender
+
+https://dl.acm.org/purchase.cfm?id=2467720
 
 https://databank.illinois.edu/datasets/IDB-9087546
 
