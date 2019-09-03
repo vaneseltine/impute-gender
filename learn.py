@@ -270,7 +270,7 @@ def main():
             logger.debug(f"No data for {name}; producing no output.")
             continue
         output_file = (OUTPUT_DIR / "matvan" / name.lower()).with_suffix(".csv")
-        with output_file.open("w") as outfile:
+        with output_file.open("w", newline="") as outfile:
 
             wrtr = csv.writer(outfile)
             wrtr.writerow(["name", "year", "pred_f"])
