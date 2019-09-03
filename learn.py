@@ -41,7 +41,7 @@ def get_package_logger(std_out=True, log_file=None, debug=True):
 
     if debug:
         formatter = logging.Formatter(
-            fmt="{asctime} {name:<20} {lineno:>3}:{levelname:<7} | {message}",
+            fmt="{asctime} {name:<10} {lineno:>3}:{levelname:<7} | {message}",
             style="{",
             datefmt=r"%Y%m%d-%H%M%S",
         )
@@ -171,12 +171,14 @@ def predict_from(model, df, i):
     probs = model.predict_proba([[i]])
     observed = df[df["year"] == i][OUTCOME]
     if observed.empty:
-        actual = "-none-"
-        result = None
+        actual = "n/a"
+        # result = None
     else:
-        actual = f"{(observed.sum() / observed.count())*100:.2f}%"
-        result = probs[0][-1]
-    logger.debug(f"{i}: true {actual} of {observed.count()}, pred: {probs}")
+        actual = f"{(observed.sum() / observed.count())*100:.1f}%"
+    result = probs[0][-1]
+    logger.debug(
+        f"{i}: n = {observed.count():<8} obs: {actual:<7} pred: {result*100:.1f}%"
+    )
     return result
 
 
